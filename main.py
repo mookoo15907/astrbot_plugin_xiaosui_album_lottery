@@ -13,7 +13,7 @@ try:
 except ImportError:
     StarTools = None
 
-from .core import (LotteryError, Store, checked_summary, commit_draw, digest,
+from .core import (LotteryError, Store, album_identifier, checked_summary, commit_draw, digest,
                    display_time, identifier, integer, qq_id, start_time, summarize)
 from .qq_reader import list_page, read_comments
 
@@ -54,7 +54,7 @@ def data_directory():
     raise RuntimeError("无法确定 AstrBot 插件数据目录，请使用标准插件安装目录。")
 
 
-@register(PLUGIN, "mookoo", "小碎群相册去重报名与抽签", "0.1.0")
+@register(PLUGIN, "mookoo", "小碎群相册去重报名与抽签", "0.1.1")
 class XiaosuiAlbumLottery(Star):
     def __init__(self, context: Context):
         super().__init__(context)
@@ -118,7 +118,7 @@ class XiaosuiAlbumLottery(Star):
             else:
                 old = self.cached_selection(selection_key)
                 rows, next_cursor = old["albums"], old["album_cursor"]
-            albums = [{"id": identifier(row.get("album_id", row.get("id")), "相册编号"),
+            albums = [{"id": album_identifier(row.get("album_id", row.get("id"))),
                        "name": clean_title(row.get("name", row.get("title", row.get("album_name", "未命名"))))}
                       for row in rows]
             subset, page, pages = page_rows(albums, "1" if arg1 == "下一页" else arg1)

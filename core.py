@@ -42,6 +42,17 @@ def identifier(value, label="留言编号") -> str:
     return value
 
 
+def album_identifier(value) -> str:
+    """QQ 相册使用编码后的不透明 ID；保留 *、! 等字符，不将其当文件名。"""
+    if isinstance(value, bool) or not isinstance(value, (str, int)):
+        raise LotteryError("相册编号缺失。")
+    value = str(value)
+    # topicId 用 | 拼接，最终由 urlencode 编码；拒绝分隔符、路径及控制字符。
+    if not re.fullmatch(r"[A-Za-z0-9_.!~*=-]{1,256}", value):
+        raise LotteryError("相册编号异常。")
+    return value
+
+
 def start_time(text: str) -> int:
     try:
         return int(datetime.strptime(text, "%Y-%m-%dT%H:%M:%S").replace(tzinfo=CST).timestamp())

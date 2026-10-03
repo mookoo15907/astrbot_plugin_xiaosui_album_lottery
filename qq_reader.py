@@ -9,7 +9,7 @@ import urllib.parse
 import urllib.request
 from http.cookies import SimpleCookie
 
-from .core import Comment, LotteryError, digest, identifier, integer, normalize_comment, qq_id
+from .core import Comment, LotteryError, album_identifier, digest, identifier, integer, normalize_comment, qq_id
 
 ENDPOINT = "https://h5.qzone.qq.com/proxy/domain/u.photo.qzone.qq.com/cgi-bin/upp/qun_list_photocmt_v2"
 PAGE_SIZE = 20
@@ -144,7 +144,7 @@ async def collect_pages(fetch, max_comments: int = 2000) -> list[Comment]:
 async def read_comments(bot, bot_qq: str, group: str, album: str, batch: str,
                         max_comments: int = 2000) -> list[Comment]:
     bot_qq, group = qq_id(bot_qq), qq_id(group)
-    album, batch = identifier(album, "相册编号"), identifier(batch, "上传批次")
+    album, batch = album_identifier(album), identifier(batch, "上传批次")
     credential = await call_action(bot, "get_credentials", domain="qzone.qq.com")
     if not isinstance(credential, dict):
         raise LotteryError("NapCat 未返回网页登录凭据。")
