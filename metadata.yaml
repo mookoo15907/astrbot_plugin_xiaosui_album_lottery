@@ -1,0 +1,6 @@
+name: astrbot_plugin_xiaosui_album_lottery
+display_name: 小碎相册抽签
+desc: 群相册上传动态留言读取、时间筛选、QQ去重及管理员确认抽取
+version: v0.1.0
+author: mookoo
+repo: https://github.com/mookoo15907/astrbot_plugin_xiaosui_album_lottery

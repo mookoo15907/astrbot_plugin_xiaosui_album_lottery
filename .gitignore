@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+lottery_state.json
+.lottery-*.tmp
