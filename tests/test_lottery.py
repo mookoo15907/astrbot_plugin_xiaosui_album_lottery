@@ -82,6 +82,11 @@ class RuleTests(unittest.TestCase):
             with self.subTest(row=row), self.assertRaises(core.LotteryError):
                 core.normalize_comment(row)
 
+    def test_album_ids_reject_topic_delimiters_paths_and_controls(self):
+        for value in (None, True, "", "a|b", "../album", "a\\b", "a\nb", "a\rb", "a b", "a&b", "a" * 257):
+            with self.subTest(value=value), self.assertRaises(core.LotteryError):
+                core.album_identifier(value)
+
     def test_draw_bounds_and_empty(self):
         current = pool([raw("a"), raw("cut", HOST, START + 10)])
         for count in (0, -1, 2, True):
@@ -182,6 +187,19 @@ class ReaderTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(recorded[0][0]["topicId"], "100000001|Album_1|2147483648")
         self.assertEqual(recorded[0][0]["cmtType"], 4)
         self.assertNotIn("TEST_COOKIE", json.dumps([row.__dict__ for row in result]))
+
+    async def test_qq_encoded_album_id_preserved_in_comment_request(self):
+        album = "V61DemoAlbum*abc!def~ghi="
+        bot = types.SimpleNamespace(call_action=AsyncMock(return_value={"cookies": "p_skey=TEST"}))
+        recorded = []
+        def page(params, headers):
+            recorded.append(params.copy())
+            return {"comments": [], "total": 0}
+        with patch.object(qq_reader, "http_page", page):
+            self.assertEqual(await qq_reader.read_comments(bot, "100000003", "100000001", album, "2147483648"), [])
+        self.assertEqual(recorded[0]["topicId"], "100000001|" + album + "|2147483648")
+        encoded = qq_reader.urllib.parse.urlencode(recorded[0])
+        self.assertEqual(qq_reader.urllib.parse.parse_qs(encoded)["topicId"][0], recorded[0]["topicId"])
 
     def test_json_and_jsonp_not_executed(self):
         data = '{"code":0,"data":{"total":0}}'
@@ -344,6 +362,18 @@ class CommandTests(unittest.IsolatedAsyncioTestCase):
         await self.command("相册")
         await self.command("图片", "1")
         return await self.command("建池", "1", core.display_time(START).replace(" ", "T"))
+
+    async def test_qq_encoded_album_id_listing_selection_and_pool(self):
+        album = "V61DemoAlbum*abc!def~ghi="
+        self.bot.call_action = AsyncMock(side_effect=lambda action, **kw:
+            {"album_list": [{"album_id": album, "name": "群相册"}]} if action == "get_qun_album_list" else
+            {"media_list": [{"image": {}, "upload_time": START - 100, "batch_id": "2147483648"}]})
+        self.assertIn("1. 群相册", await self.command("相册"))
+        self.assertIn("上传", await self.command("图片", "1"))
+        self.bot.call_action.assert_awaited_with("get_group_album_media_list", group_id="100000001",
+                                               attach_info="", album_id=album)
+        self.assertIn("已经建池", await self.command("建池", "1", core.display_time(START).replace(" ", "T")))
+        self.assertEqual(next(iter(self.plugin.store.load()["pools"].values()))["album"]["id"], album)
 
     async def test_complete_flow_restart_and_idempotent_result(self):
         await self.create_pool()
